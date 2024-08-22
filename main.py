@@ -7,6 +7,10 @@ from statsbombpy import sb
 from mplsoccer import Pitch
 import matplotlib.pyplot as plt
 
+
+
+
+
 competition = sb.competitions()
 
 #Gender Choice
@@ -27,6 +31,25 @@ selected_competition = st.selectbox(
 )
 selected_competition_df = competition_gender_df[competition_gender_df['competition_name']==selected_competition]
 # st.write(selected_competition_df)
+# for i in competitions:
+#     st.markdown("""
+#     <style>
+#     div.stButton > button {
+#         background-color: #007bff;
+#         color: white;
+#         font-size: 14px;
+#         padding: 10px 30px;
+#         border-radius: 50px;
+#         border: none;
+#         width: auto;
+#     }
+#     div.stButton > button:hover {
+#         background-color: #0056b3;
+#         color: white;
+#     }
+#     </style>
+#     """, unsafe_allow_html=True)
+#     st.button(i)
 
 #Season Choice
 seasons = selected_competition_df['season_name'].unique()
