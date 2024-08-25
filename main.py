@@ -113,7 +113,7 @@ with col1:
     )
     selected_one_team_matches = one_team_matches[one_team_matches['match_id']==selected_match]
     match_id = selected_one_team_matches['match_id'].iloc[0]
-
+    st.write(selected_one_team_matches)
 
     home_team = selected_one_team_matches['home_team'].iloc[0]
     away_team = selected_one_team_matches['away_team'].iloc[0]
@@ -124,13 +124,21 @@ with col1:
 
 
 with col2:
-    
+    col21, col22 = st.columns([1,1])
+
     position_id_to_coordinates_home = clp.initial_player_position_allpitch_home
     position_id_to_coordinates_away = clp.initial_player_position_allpitch_away
     # functions.display_player_names_and_positions_twoTeam(home_lineups, away_lineups, position_id_to_coordinates_home, position_id_to_coordinates_away)
-    functions.display_player_names_and_positions_oneTeam(home_lineups, position_id_to_coordinates_home)
-    # functions.display_player_names_and_positions_oneTeam(away_lineups, position_id_to_coordinates_away)
+    
+    with col21:
+        functions.display_player_names_and_positions_oneTeam(home_lineups, position_id_to_coordinates_home)
+
+    with col22:
+        functions.display_player_names_and_positions_oneTeam(away_lineups, position_id_to_coordinates_away)
 
 
 
 # st.image('https://raw.githubusercontent.com/luukhopman/football-logos/master/logos/FR1/AS%20Monaco.png')
+
+
+

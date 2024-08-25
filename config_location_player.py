@@ -73,5 +73,5 @@ initial_player_position_allpitch_home = {
 
 initial_player_position_allpitch_away = {
     position_id: (pitch_width - x, y)
-    for position_id, (x, y) in initial_player_position_middlepitch_home.items()
+    for position_id, (x, y) in initial_player_position_allpitch_home.items()
 }
