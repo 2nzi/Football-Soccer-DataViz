@@ -8,6 +8,8 @@ from mplsoccer import Pitch
 import matplotlib.pyplot as plt
 import config_location_player as clp
 import functions
+import json
+
 
 st.set_page_config(layout="wide")
 
@@ -48,7 +50,6 @@ st.markdown('<div class="banner-image"></div>', unsafe_allow_html=True)
 #     '<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsmWldT7_OE2kDhbehYcuTNHzItGFbeH5igw&s" class="centered-image"> <br> <br> <br>',
 #     unsafe_allow_html=True
 # )
-
 
 
 col1, col2 = st.columns([1, 3])
@@ -104,19 +105,23 @@ with col1:
         teams,
     )
     one_team_matches = matches[(matches['home_team'] == selected_team) | (matches['away_team'] == selected_team)]
-    matches = one_team_matches['match_id']
-
+    # matches = one_team_matches['match_id']
+    matches = one_team_matches['match_date']
 
     selected_match = st.selectbox(
         "Choose your match",
         matches,
     )
-    selected_one_team_matches = one_team_matches[one_team_matches['match_id']==selected_match]
+    selected_one_team_matches = one_team_matches[one_team_matches['match_date']==selected_match]
     match_id = selected_one_team_matches['match_id'].iloc[0]
-    st.write(selected_one_team_matches)
 
     home_team = selected_one_team_matches['home_team'].iloc[0]
+    home_score = selected_one_team_matches['home_score'].iloc[0]
+    home_color = "#0B8494"
+
     away_team = selected_one_team_matches['away_team'].iloc[0]
+    away_score = selected_one_team_matches['away_score'].iloc[0]
+    away_color = "#F05A7E" 
 
     home_lineups = sb.lineups(match_id=match_id)[home_team]
     away_lineups = sb.lineups(match_id=match_id)[away_team]
@@ -124,21 +129,70 @@ with col1:
 
 
 with col2:
+    # st.image('img/logo_stade.png', width=200)  
+
+    st.markdown(
+        f"""
+        <div style='text-align: center;'>
+            <span style='color: {home_color}; margin-right: 30px;'>{home_team} {home_score}</span>
+            <span style='margin-right: 30px;'>-</span>
+            <span style='color: {away_color};'>{away_score} {away_team}</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
     col21, col22 = st.columns([1,1])
 
     position_id_to_coordinates_home = clp.initial_player_position_allpitch_home
     position_id_to_coordinates_away = clp.initial_player_position_allpitch_away
     # functions.display_player_names_and_positions_twoTeam(home_lineups, away_lineups, position_id_to_coordinates_home, position_id_to_coordinates_away)
     
+    with open('club.json', encoding='utf-8') as f:
+        images_data = json.load(f) 
+
+    # Integrate club logo
+    home_team_image = functions.get_best_match_image(home_team, images_data)
+    away_team_image = functions.get_best_match_image(away_team, images_data)
+
     with col21:
-        functions.display_player_names_and_positions_oneTeam(home_lineups, position_id_to_coordinates_home)
+
+        # if home_team_image:
+        #     st.image(home_team_image)
+
+        functions.display_player_names_and_positions_oneTeam(home_lineups, position_id_to_coordinates_home, home_color)
+
+        st.markdown(
+            f"""
+            <div style='text-align: center;'>
+                <span style='color: {home_color}; margin-right: 30px;'>{selected_one_team_matches['home_managers'].iloc[0]}</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )     
 
     with col22:
-        functions.display_player_names_and_positions_oneTeam(away_lineups, position_id_to_coordinates_away)
 
+        # if away_team_image:
+        #     st.image(away_team_image)
 
+        functions.display_player_names_and_positions_oneTeam(away_lineups, position_id_to_coordinates_away,away_color)
+   
+        st.markdown(
+            f"""
+            <div style='text-align: center;'>
+                <span style='color: {away_color}; margin-right: 30px;'>{selected_one_team_matches['away_managers'].iloc[0]}</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )        
+    # st. 
 
 # st.image('https://raw.githubusercontent.com/luukhopman/football-logos/master/logos/FR1/AS%20Monaco.png')
+
+
+# st.write('selected_one_team_matches',selected_one_team_matches)
 
 
 
