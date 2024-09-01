@@ -3,6 +3,7 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from fuzzywuzzy import fuzz, process
+import plotly.express as px 
 
 
 def display_player_names_and_positions_middlePitch(home_lineups, away_lineups, position_id_to_coordinates_home, position_id_to_coordinates_away):
@@ -127,6 +128,10 @@ def display_player_names_and_positions_twoTeam(home_lineups, away_lineups, posit
 
 
 
+
+
+
+
 def display_player_names_and_positions_oneTeam(home_lineups, position_id_to_coordinates_home,color):
     # Dictionaries to store coordinates and player names for the home team
     coordinates_dict_home = {}
@@ -180,7 +185,14 @@ def get_best_match_image(team_name, images_data):
 
 
 
-#make a class !
+
+
+
+
+
+
+
+
 
 class StadiumImageFetcher:
     def __init__(self):
@@ -228,3 +240,289 @@ def main_stadium():
 
 if __name__ == "__main__":
     main_stadium()
+
+
+
+def box_plot_pass(events,team):
+
+    event_filterTeam = events[events['team']==team]
+    event_pass = event_filterTeam.filter(regex='^(pass)', axis=1).dropna(how='all')
+    event_pass_length = event_pass['pass_length']
+
+    fig = px.box(event_pass_length, y=event_pass_length, labels={'y':'Pass Length'}, title=f'{team} Distribution of Pass Length')
+    fig.update_layout(width=300, height=600)  # 200 pixels de largeur, 400 pixels de hauteur
+
+    # Afficher le graphique dans Streamlit
+    st.plotly_chart(fig)
+
+
+
+
+
+
+
+
+
+
+
+
+def get_possession(events):
+    """
+    Extracts and normalizes the possession counts for the two teams from the events DataFrame.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame containing an events column 'possession_team'.
+
+    Returns:
+    - home_team_possession (float): Normalized possession percentage for the home team, rounded to one decimal place.
+    - away_team_possession (float): Normalized possession percentage for the away team, rounded to one decimal place.
+    """
+    # Get possession counts
+    possession_counts = events['possession_team'].value_counts()
+    
+    # Get the top two possession teams
+    home_team_possession, away_team_possession = possession_counts.iloc[0], possession_counts.iloc[1]
+    
+    # Calculate total possession
+    total_possession = home_team_possession + away_team_possession
+    
+    # Normalize possession and round to one decimal place
+    home_team_possession = round((home_team_possession / total_possession) * 100, 1)
+    away_team_possession = round((away_team_possession / total_possession) * 100, 1)
+    
+    return home_team_possession, away_team_possession
+
+
+
+def get_total_xg(events):
+    """
+    Calcule la somme totale des xG (expected goals) par équipe et retourne les valeurs arrondies à 2 décimales.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'shot_statsbomb_xg' et 'team'.
+
+    Returns:
+    - home_xg (float): Somme totale des xG pour l'équipe à domicile, arrondie à 2 décimales.
+    - away_xg (float): Somme totale des xG pour l'équipe à l'extérieur, arrondie à 2 décimales.
+    """
+    # Filtrer les colonnes et supprimer les lignes où 'shot_statsbomb_xg' est NaN
+    data = events.filter(regex='^shot_statsbomb_xg|^team$').dropna(subset=['shot_statsbomb_xg'])
+    
+    # Grouper par 'team' et calculer la somme des xG
+    data = data.groupby('team')['shot_statsbomb_xg'].sum()
+    
+    # Arrondir les résultats à 2 décimales
+    home_xg, away_xg = round(data.iloc[0], 2), round(data.iloc[1], 2)
+    
+    return home_xg, away_xg
+
+def get_total_shots(events):
+    """
+    Calcule le nombre total de tirs (shots) par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'shot_statsbomb_xg' et 'team'.
+
+    Returns:
+    - home_shots (int): Nombre total de tirs pour l'équipe à domicile.
+    - away_shots (int): Nombre total de tirs pour l'équipe à l'extérieur.
+    """
+    # Filtrer les colonnes et supprimer les lignes où 'shot_statsbomb_xg' est NaN
+    data = events.filter(regex='^shot_statsbomb_xg|^team$').dropna(subset=['shot_statsbomb_xg'])
+    
+    # Grouper par 'team' et compter le nombre de tirs
+    shot_counts = data.groupby('team').count()['shot_statsbomb_xg']
+    
+    # Retourner les comptes pour les deux équipes
+    home_shots, away_shots = shot_counts.iloc[0], shot_counts.iloc[1]
+    
+    return home_shots, away_shots
+
+
+def get_total_shots_off_target(events):
+    """
+    Calcule le nombre total de tirs non cadrés (off target) par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'shot_outcome' et 'team'.
+
+    Returns:
+    - home_off_target (int): Nombre total de tirs non cadrés pour l'équipe à domicile.
+    - away_off_target (int): Nombre total de tirs non cadrés pour l'équipe à l'extérieur.
+    """
+    # Define outcomes that indicate a shot was off target
+    off_target_outcomes = ['Off T', 'Blocked', 'Missed']
+    
+    # Filter the events DataFrame for shots off target
+    data = events[events['shot_outcome'].isin(off_target_outcomes)]
+    
+    # Group by 'team' and count the number of off-target shots
+    off_target_counts = data.groupby('team').size()
+    
+    # Return the counts for the two teams
+    home_off_target, away_off_target = off_target_counts.iloc[0], off_target_counts.iloc[1]
+    
+    return home_off_target, away_off_target
+
+
+def get_total_shots_on_target(events):
+    """
+    Calcule le nombre total de tirs cadrés (on target) par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'shot_outcome' et 'team'.
+
+    Returns:
+    - home_on_target (int): Nombre total de tirs cadrés pour l'équipe à domicile.
+    - away_on_target (int): Nombre total de tirs cadrés pour l'équipe à l'extérieur.
+    """
+    # Define outcomes that indicate a shot was on target
+    on_target_outcomes = ['Goal', 'Saved', 'Saved To Post', 'Shot Saved Off Target']
+    
+    # Filter the events DataFrame for shots on target
+    data = events[events['shot_outcome'].isin(on_target_outcomes)]
+    
+    # Group by 'team' and count the number of on-target shots
+    on_target_counts = data.groupby('team').size()
+    
+    # Return the counts for the two teams
+    home_on_target, away_on_target = on_target_counts.iloc[0], on_target_counts.iloc[1]
+    
+    return home_on_target, away_on_target
+
+
+
+def get_total_passes(events):
+    """
+    Calcule le nombre total de passes par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'pass_outcome' et 'team'.
+
+    Returns:
+    - home_passes (int): Nombre total de passes pour l'équipe à domicile.
+    - away_passes (int): Nombre total de passes pour l'équipe à l'extérieur.
+    """
+    # Filtrer les colonnes 'pass_outcome' et 'team', puis grouper par équipe et compter le nombre de passes
+    pass_counts = events.filter(regex='^pass_end_location|^team$').groupby('team').count()['pass_end_location']
+    
+    # Retourner les comptes pour les deux équipes
+    home_passes, away_passes = pass_counts.iloc[0], pass_counts.iloc[1]
+    
+    return home_passes, away_passes
+
+def get_successful_passes(events):
+    """
+    Calculates the total number of successful passes for home and away teams.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame containing the columns for all passes and pass outcomes.
+
+    Returns:
+    - home_successful_passes (int): Successful passes for the home team.
+    - away_successful_passes (int): Successful passes for the away team.
+    """
+    # Get the total passes using the get_total_passes function
+    home_passes, away_passes = get_total_passes(events)
+    
+    # Identify unsuccessful passes based on 'type' or another column indicating unsuccessful outcomes
+    unsuccessful_passes = events.filter(regex='^pass_outcome|^team$').groupby('team').count().reset_index()['pass_outcome']
+    
+    # Calculate successful passes by subtracting unsuccessful passes from total passes
+    home_unsuccessful_passes = unsuccessful_passes.iloc[0]
+    away_unsuccessful_passes = unsuccessful_passes.iloc[1]
+    
+    home_successful_passes = home_passes - home_unsuccessful_passes
+    away_successful_passes = away_passes - away_unsuccessful_passes
+    
+    return home_successful_passes, away_successful_passes
+
+def get_total_corners(events):
+    """
+    Calcule le nombre total de corners par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'pass_type' et 'team'.
+
+    Returns:
+    - home_corners (int): Nombre total de corners pour l'équipe à domicile.
+    - away_corners (int): Nombre total de corners pour l'équipe à l'extérieur.
+    """
+    # Filtrer les colonnes 'pass_type' et 'team', puis grouper par équipe et compter le nombre de corners
+    corner_counts = events.filter(regex='^pass_type|^team$').query('pass_type == "Corner"').groupby('team').count()['pass_type']
+    
+    # Extract the team names from the events DataFrame
+    teams = events['team'].unique()
+    
+    # Handle cases where a team might not have any corners
+    home_corners = corner_counts.get(teams[0], 0)
+    away_corners = corner_counts.get(teams[1], 0)
+    
+    return home_corners, away_corners
+
+
+
+def get_total_fouls(events):
+    """
+    Calcule le nombre total de fautes par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'team' et 'type'.
+
+    Returns:
+    - home_fouls (int): Nombre total de fautes pour l'équipe à domicile.
+    - away_fouls (int): Nombre total de fautes pour l'équipe à l'extérieur.
+    """
+    fouls = events[events['type'] == 'Foul Committed']
+    foul_counts = fouls.groupby('team').size()
+    home_fouls, away_fouls = foul_counts.iloc[0], foul_counts.iloc[1]
+    
+    return home_fouls, away_fouls
+
+
+
+def get_total_yellow_cards(events):
+    """
+    Calcule le nombre total de cartons jaunes par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'bad_behaviour_card' et 'team'.
+
+    Returns:
+    - home_yellow_cards (int): Nombre total de cartons jaunes pour l'équipe à domicile.
+    - away_yellow_cards (int): Nombre total de cartons jaunes pour l'équipe à l'extérieur.
+    """
+    # Filtrer les colonnes 'bad_behaviour_card' et 'team', puis grouper par équipe et compter le nombre de cartons jaunes
+    yellow_card_counts = events.filter(regex='^bad_behaviour_card|^team$').query('bad_behaviour_card == "Yellow Card"').groupby('team').count()['bad_behaviour_card']
+    
+    # Extraire les noms des équipes de l'événement DataFrame
+    teams = events['team'].unique()
+    
+    # Gérer les cas où une équipe pourrait ne pas avoir de cartons jaunes
+    home_yellow_cards = yellow_card_counts.get(teams[0], 0)
+    away_yellow_cards = yellow_card_counts.get(teams[1], 0)
+    
+    return home_yellow_cards, away_yellow_cards
+
+def get_total_red_cards(events):
+    """
+    Calcule le nombre total de cartons rouges par équipe.
+
+    Parameters:
+    - events (pd.DataFrame): DataFrame contenant les colonnes 'bad_behaviour_card' et 'team'.
+
+    Returns:
+    - home_red_cards (int): Nombre total de cartons rouges pour l'équipe à domicile.
+    - away_red_cards (int): Nombre total de cartons rouges pour l'équipe à l'extérieur.
+    """
+    # Filtrer les colonnes 'bad_behaviour_card' et 'team', puis grouper par équipe et compter le nombre de cartons rouges
+    red_card_counts = events.filter(regex='^bad_behaviour_card|^team$').query('bad_behaviour_card == "Red Card"').groupby('team').count()['bad_behaviour_card']
+    
+    # Extraire les noms des équipes de l'événement DataFrame
+    teams = events['team'].unique()
+    
+    # Gérer les cas où une équipe pourrait ne pas avoir de cartons rouges
+    home_red_cards = red_card_counts.get(teams[0], 0)
+    away_red_cards = red_card_counts.get(teams[1], 0)
+    
+    return home_red_cards, away_red_cards

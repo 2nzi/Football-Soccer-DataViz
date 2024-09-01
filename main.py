@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import config_location_player as clp
 import functions
 import json
-
+import numpy as np
 
 st.set_page_config(layout="wide")
 
@@ -52,8 +52,9 @@ st.markdown('<div class="banner-image"></div>', unsafe_allow_html=True)
 # )
 
 
-col1, col2 = st.columns([1, 3])
 
+#PARTIE 1 : MATCH CHOOSEN
+col1, col2 = st.columns([1, 3])
 with col1:
 
     competition = sb.competitions()
@@ -88,13 +89,7 @@ with col1:
 
     competition_id = selected_competition_df[selected_competition_df['season_name']==selected_season]['competition_id'].iloc[0]
     season_id = selected_competition_df[selected_competition_df['season_name']==selected_season]['season_id'].iloc[0]
-
-
-
-
     matches = sb.matches(competition_id=competition_id, season_id=season_id)
-
-
 
 
     #Season Choice
@@ -125,18 +120,32 @@ with col1:
 
     home_lineups = sb.lineups(match_id=match_id)[home_team]
     away_lineups = sb.lineups(match_id=match_id)[away_team]
+
     events = sb.events(match_id=match_id)
+    home_tactic_formation = events['tactics'].iloc[0]['formation']
+    away_tactic_formation = events['tactics'].iloc[1]['formation']
 
 
+
+
+
+
+
+#PARTIE 2 : DASHBOARD
 with col2:
     # st.image('img/logo_stade.png', width=200)  
-
+    pitch_color='#d2d2d2',
     st.markdown(
         f"""
         <div style='text-align: center;'>
             <span style='color: {home_color}; margin-right: 30px;'>{home_team} {home_score}</span>
             <span style='margin-right: 30px;'>-</span>
             <span style='color: {away_color};'>{away_score} {away_team}</span>
+        </div>
+        <div style='text-align: center;'>
+            <span style='color: {pitch_color}; margin-right: 30px;'>{home_tactic_formation}</span>
+            <span style='margin-right: 30px;'> </span>
+            <span style='color: {pitch_color};'>{away_tactic_formation}</span>
         </div>
         """,
         unsafe_allow_html=True
@@ -187,12 +196,103 @@ with col2:
             """,
             unsafe_allow_html=True
         )        
-    # st. 
-
-# st.image('https://raw.githubusercontent.com/luukhopman/football-logos/master/logos/FR1/AS%20Monaco.png')
-
-
-# st.write('selected_one_team_matches',selected_one_team_matches)
 
 
 
+    # st.write(events)
+
+# st.write(events[events['team']==home_team])
+# st.write(event_pass)
+# st.write(event_pass_length)
+
+
+
+
+
+
+
+home_possession, away_possession = functions.get_possession(events)
+home_xg, away_xg = functions.get_total_xg(events)
+home_shots, away_shots = functions.get_total_shots(events)
+home_off_target, away_off_target = functions.get_total_shots_off_target(events)
+home_on_target, away_on_target = functions.get_total_shots_on_target(events)
+home_passes, away_passes = functions.get_total_passes(events)
+home_successful_passes, away_successful_passes = functions.get_successful_passes(events)
+home_corners, away_corners = functions.get_total_corners(events)
+home_fouls, away_fouls = functions.get_total_fouls(events)
+home_yellow_cards, away_yellow_cards = functions.get_total_yellow_cards(events)
+home_red_cards, away_red_cards = functions.get_total_red_cards(events)
+
+categories_scores = [
+    {"catégorie": "Possession de balle (%)", "Home Team": home_possession, "Away Team": away_possession},
+    {"catégorie": "xG (Buts attendus)", "Home Team": home_xg, "Away Team": away_xg},
+    {"catégorie": "Tirs", "Home Team": home_shots, "Away Team": away_shots},
+    {"catégorie": "Tirs cadrés", "Home Team": home_on_target, "Away Team": away_on_target},
+    {"catégorie": "Tirs non cadrés", "Home Team": home_off_target, "Away Team": away_off_target},
+    {"catégorie": "Passes", "Home Team": home_passes, "Away Team": away_passes},
+    {"catégorie": "Passes réussies", "Home Team": home_successful_passes, "Away Team": away_successful_passes},
+    {"catégorie": "Corners", "Home Team": home_corners, "Away Team": away_corners},
+    {"catégorie": "Fautes", "Home Team": home_fouls, "Away Team": away_fouls},
+    {"catégorie": "Cartons Jaunes", "Home Team": home_yellow_cards, "Away Team": away_yellow_cards},
+    {"catégorie": "Cartons Rouges", "Home Team": home_red_cards, "Away Team": away_red_cards},
+]
+
+
+categories = [entry['catégorie'] for entry in categories_scores]
+home_scores = [entry['Home Team'] for entry in categories_scores]
+away_scores = [entry['Away Team'] for entry in categories_scores]
+
+# Normalisation des scores pour chaque catégorie
+home_normalized = []
+away_normalized = []
+
+for home, away in zip(home_scores, away_scores):
+    total = home + away
+    if total != 0:
+        home_normalized.append((home / total) * 100)
+        away_normalized.append((away / total) * 100)
+    else:
+        # If total is 0, you can decide how to handle this case.
+        # For example, you can append 0 to both lists or handle it differently.
+        home_normalized.append(0)
+        away_normalized.append(0)
+
+
+# Augmenter l'espacement entre les barres en multipliant y_pos par un facteur
+spacing_factor = 2.5  # Ajustez cette valeur pour augmenter ou diminuer l'espacement
+y_pos = np.arange(len(categories)) * spacing_factor
+
+# Tracé
+fig, ax = plt.subplots(figsize=(10, 8))
+
+# Ajout des fonds gris légers pour chaque catégorie
+for i in range(len(categories)):
+    ax.add_patch(plt.Rectangle((-100, y_pos[i] - 0.5), 200, 1, color='lightgray', alpha=0.3))
+
+# Tracé des scores normalisés des deux équipes
+ax.barh(y_pos, home_normalized, color='blue', align='center', label='Home Team')
+ax.barh(y_pos, [-score for score in away_normalized], color='green', align='center', label='Away Team')
+
+# Centrage des noms des catégories
+for i in range(len(categories)):
+    ax.text(0, y_pos[i]+0.8, categories[i], ha='center', va='center', fontsize=10)
+
+# Ajout des valeurs non normalisées à l'extrémité des barres
+for i in range(len(categories)):
+    ax.text(home_normalized[i] / 2, y_pos[i], f'{home_scores[i]}', va='center', color='white', fontweight='bold')
+    ax.text(-away_normalized[i] / 2, y_pos[i], f'{away_scores[i]}', va='center', color='white', fontweight='bold')
+
+# Ajustement des limites des axes
+ax.set_xlim(-100, 100)
+ax.set_ylim(-1, max(y_pos) + spacing_factor)
+
+# Cacher les spines
+for spine in ax.spines.values():
+    spine.set_visible(False)
+
+# Suppression des y-ticks et x-ticks
+ax.set_yticks([])
+ax.set_xticks([])
+
+# Affichage du graphique dans Streamlit
+st.pyplot(fig)
