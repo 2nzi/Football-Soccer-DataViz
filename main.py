@@ -8,6 +8,7 @@ from mplsoccer import Pitch
 import matplotlib.pyplot as plt
 import config_location_player as clp
 import functions
+import Pitch3D
 import json
 import numpy as np
 
@@ -194,7 +195,7 @@ with col2:
     position_id_to_coordinates_away = clp.initial_player_position_allpitch_away
     # functions.display_player_names_and_positions_twoTeam(home_lineups, away_lineups, position_id_to_coordinates_home, position_id_to_coordinates_away)
     
-    with open('club.json', encoding='utf-8') as f:
+    with open('data/club.json', encoding='utf-8') as f:
         images_data = json.load(f) 
 
     # Integrate club logo
@@ -251,4 +252,4 @@ end_points = shot_events_location['shot_end_location'].tolist()
 
 st.write(shot_events_location)
 
-functions.main_3D_pitch(start_points,end_points)
+Pitch3D.main_3D_pitch(start_points,end_points)
