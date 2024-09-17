@@ -135,6 +135,9 @@ with col1:
 #PARTIE 2 : DASHBOARD
 with col2:
 
+    st.write(events.filter(regex='^bad_behaviour_card|^team$'))
+
+
     home_possession, away_possession = functions.get_possession(events)
     home_xg, away_xg = functions.get_total_xg(events)
     home_shots, away_shots = functions.get_total_shots(events)

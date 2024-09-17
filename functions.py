@@ -240,8 +240,6 @@ def main_stadium():
     stadium = StadiumImageFetcher()
     stadium.display_stadium()
 
-if __name__ == "__main__":
-    main_stadium()
 
 
 

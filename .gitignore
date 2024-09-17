@@ -167,3 +167,5 @@ main_V0.py
 *.json
 *.png
 *.jpg
+/data
+/scripts
